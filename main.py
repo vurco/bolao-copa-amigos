@@ -1,47 +1,60 @@
 import csv
+import os
 
-# --- CONFIGURAÇÃO DO RESULTADO REAL ---
-# (Mude aqui quando o jogo acabar!)
-RESULTADO_REAL = {"time1": 2, "time2": 0} 
+ARQUIVO = 'palpites_copa.csv'
+
+# Simulando os resultados reais de vários jogos
+RESULTADOS_OFICIAIS = {
+    "Brasil x Sérvia": (2, 0),
+    "Portugal x Gana": (3, 2),
+    "França x Austrália": (4, 1)
+}
+
+def inicializar_bd():
+    if not os.path.exists(ARQUIVO):
+        with open(ARQUIVO, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Nome', 'Jogo', 'Gols1', 'Gols2'])
+
+def salvar_palpite(nome, jogo, g1, g2):
+    with open(ARQUIVO, mode='a', newline='', encoding='utf-8') as f:
+        csv.writer(f).writerow([nome, jogo, g1, g2])
 
 def calcular_ranking():
-    ranking = {} # Dicionário para guardar {Nome: Pontos}
-
-    try:
-        with open('palpites.csv', mode='r', encoding='utf-8') as arquivo:
-            leitor = csv.DictReader(arquivo)
-            for linha in leitor:
-                nome = linha['Nome']
-                g1 = int(linha['Gols1'])
-                g2 = int(linha['Gols2'])
+    ranking = {}
+    with open(ARQUIVO, mode='r', encoding='utf-8') as f:
+        leitor = csv.DictReader(f)
+        for linha in leitor:
+            nome = linha['Nome']
+            jogo = linha['Jogo']
+            g1, g2 = int(linha['Gols1']), int(linha['Gols2'])
+            
+            # Busca o resultado real para ESSE jogo
+            if jogo in RESULTADOS_OFICIAIS:
+                res_g1, res_g2 = RESULTADOS_OFICIAIS[jogo]
                 
-                pontos = 0
-                # Regra: Placar Exato = 10 pontos
-                if g1 == RESULTADO_REAL["time1"] and g2 == RESULTADO_REAL["time2"]:
-                    pontos = 10
-                # Regra: Acertou o vencedor ou empate = 5 pontos
-                elif (g1 > g2 and RESULTADO_REAL["time1"] > RESULTADO_REAL["time2"]) or \
-                     (g1 < g2 and RESULTADO_REAL["time1"] < RESULTADO_REAL["time2"]) or \
-                     (g1 == g2 and RESULTADO_REAL["time1"] == RESULTADO_REAL["time2"]):
-                    pontos = 5
+                pts = 0
+                if g1 == res_g1 and g2 == res_g2:
+                    pts = 10
+                elif (g1 > g2 and res_g1 > res_g2) or (g1 < g2 and res_g1 < res_g2) or (g1 == g2 and res_g1 == res_g2):
+                    pts = 5
                 
-                # Soma os pontos ao total do jogador
-                ranking[nome] = ranking.get(nome, 0) + pontos
-        
-        # Ordenar o ranking do maior para o menor
-        ranking_ordenado = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
-        return ranking_ordenado
+                ranking[nome] = ranking.get(nome, 0) + pts
+    return ranking
 
-    except FileNotFoundError:
-        return []
+# --- TESTE ---
+inicializar_bd()
+print("Jogos disponíveis:", list(RESULTADOS_OFICIAIS.keys()))
+j = input("Qual jogo deseja apostar? ")
+n = input("Seu nome: ")
+p1 = int(input("Gols Time 1: "))
+p2 = int(input("Gols Time 2: "))
 
-# --- EXIBIÇÃO ---
-print("\n--- 🏆 RANKING ATUALIZADO ---")
-lista_ranking = calcular_ranking()
+salvar_palpite(n, j, p1, p2)
 
-if not lista_ranking:
-    print("Nenhum palpite registrado ainda.")
-else:
-    for i, (nome, pts) in enumerate(lista_ranking, 1):
-        print(f"{i}º - {nome}: {pts} pontos")
+print("\n--- 🏆 RANKING GERAL ---")
+ranking_final = calcular_ranking()
+for nome, pontos in sorted(ranking_final.items(), key=lambda x: x[1], reverse=True):
+    print(f"{nome}: {pontos} pts")
+
 
